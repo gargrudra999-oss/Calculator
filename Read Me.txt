@@ -1,0 +1,4 @@
+cd c:\Users\ASUS\Desktop\Calculator\Financial_Risk_Calculator
+python main.py
+
+use this to run app

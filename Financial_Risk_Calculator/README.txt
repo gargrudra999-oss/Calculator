@@ -62,7 +62,6 @@ INCLUDED MODULES
    - Displays : Projected investment value, estimated profit or loss, and
                 differences between scenarios (High vs Low, Moderate vs Low,
                 High vs Moderate).
-   - Notice   : All projections are explicitly labeled as HYPOTHETICAL.
 
 6. Calculation History (SQLite3)
    - Automatically stores every successful calculation with ID, category,

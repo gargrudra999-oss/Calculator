@@ -311,10 +311,10 @@ class FinancialCalculator:
         moderate_rate,
         high_rate,
     ):
-        """Simulate three hypothetical return scenarios (Low, Moderate, High).
+        """Simulate three return scenarios (Low, Moderate, High).
 
         Supports zero and negative return assumptions (> -100%) to illustrate
-        potential losses as well as gains. All results are marked hypothetical.
+        potential losses as well as gains.
         """
         initial = self._validate_positive_amount(
             initial_investment, "Initial Investment", allow_zero=True
@@ -344,9 +344,9 @@ class FinancialCalculator:
 
         scenarios = {}
         for key, label, rate_val in (
-            ("low", "Low Return (Hypothetical)", r_low),
-            ("moderate", "Moderate Return (Hypothetical)", r_mod),
-            ("high", "High Return (Hypothetical)", r_high),
+            ("low", "Low Return", r_low),
+            ("moderate", "Moderate Return", r_mod),
+            ("high", "High Return", r_high),
         ):
             proj = self._project_investment(initial, monthly, rate_val, months)
             scenarios[key] = {
@@ -369,11 +369,6 @@ class FinancialCalculator:
         }
 
         return {
-            "is_hypothetical": True,
-            "disclaimer": (
-                "HYPOTHETICAL SCENARIOS: Values below are illustrative projections "
-                "based on user-defined assumptions and are not guaranteed."
-            ),
             "initial_investment": initial,
             "monthly_investment": monthly,
             "years": t,

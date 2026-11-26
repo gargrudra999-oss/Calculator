@@ -520,7 +520,7 @@ class DashboardHomeView(BaseCalculatorView):
             (
                 "risk_simulator",
                 "△  Financial Risk Simulator",
-                "Compare Low, Moderate, and High hypothetical return scenarios with editable assumptions and scenario spreads.",
+                "Compare Low, Moderate, and High return scenarios with editable assumptions and scenario spreads.",
                 Theme.WARNING,
             ),
         ]
@@ -1295,7 +1295,7 @@ class InvestmentGrowthView(BaseCalculatorView):
 
 
 class RiskSimulatorView(BaseCalculatorView):
-    """Module 4: Financial Risk Simulator View with three clearly labeled hypothetical scenarios."""
+    """Module 4: Financial Risk Simulator View with Low, Moderate, and High scenarios."""
 
     def __init__(self, parent, app):
         super().__init__(
@@ -1304,31 +1304,6 @@ class RiskSimulatorView(BaseCalculatorView):
             title="Financial Risk Simulator",
             subtitle="Compare Low, Moderate, and High return assumptions to evaluate upside and downside risk.",
         )
-
-        # Mandatory Hypothetical Notice Banner
-        notice = tk.Frame(
-            self.content,
-            bg="#2E2314",
-            highlightbackground=Theme.WARNING,
-            highlightthickness=1,
-            padx=14,
-            pady=10,
-        )
-        notice.pack(fill="x", pady=(0, 16))
-        tk.Label(
-            notice,
-            text=(
-                "⚠ HYPOTHETICAL SCENARIO ANALYSIS: All Low, Moderate, and High projections below "
-                "are hypothetical illustrations based on your chosen return assumptions. "
-                "Actual market returns vary and losses are possible."
-            ),
-            bg="#2E2314",
-            fg="#FDE68A",
-            font=Theme.FONT_SMALL,
-            anchor="w",
-            justify="left",
-            wraplength=860,
-        ).pack(fill="x")
 
         body = tk.Frame(self.content, bg=Theme.BG_MAIN)
         body.pack(fill="both", expand=True)
@@ -1353,7 +1328,7 @@ class RiskSimulatorView(BaseCalculatorView):
 
         tk.Label(
             form_card,
-            text="Hypothetical Annual Return Assumptions (%)",
+            text="Annual Return Assumptions (%)",
             bg=Theme.CARD_BG,
             fg=Theme.WARNING,
             font=Theme.FONT_BODY_BOLD,
@@ -1395,23 +1370,23 @@ class RiskSimulatorView(BaseCalculatorView):
             scenarios_row.columnconfigure(c, weight=1, uniform="scen")
 
         self.card_low = self._create_scenario_card(
-            scenarios_row, "HYPOTHETICAL: LOW RETURN", Theme.DANGER
+            scenarios_row, "LOW RETURN", Theme.DANGER
         )
         self.card_low["frame"].grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         self.card_mod = self._create_scenario_card(
-            scenarios_row, "HYPOTHETICAL: MODERATE", Theme.WARNING
+            scenarios_row, "MODERATE RETURN", Theme.WARNING
         )
         self.card_mod["frame"].grid(row=0, column=1, sticky="nsew", padx=3)
 
         self.card_high = self._create_scenario_card(
-            scenarios_row, "HYPOTHETICAL: HIGH RETURN", Theme.SUCCESS
+            scenarios_row, "HIGH RETURN", Theme.SUCCESS
         )
         self.card_high["frame"].grid(row=0, column=2, sticky="nsew", padx=(6, 0))
 
         # Scenario Differences Card
         diff_card = self.create_card(
-            results_col, title="Scenario Spread & Differences (Hypothetical)"
+            results_col, title="Scenario Spread & Differences"
         )
         diff_card.pack(fill="x", pady=(0, 12))
 
@@ -1437,7 +1412,7 @@ class RiskSimulatorView(BaseCalculatorView):
 
         # Visual Comparison Bars
         chart_card = self.create_card(
-            results_col, title="Hypothetical Value Comparison"
+            results_col, title="Scenario Value Comparison"
         )
         chart_card.pack(fill="x")
 
@@ -1523,7 +1498,7 @@ class RiskSimulatorView(BaseCalculatorView):
         }
 
     def _update_scenario_card(self, card, data):
-        card["rate"].configure(text=f"Hypothetical Rate: {data['annual_rate']:.2f}% p.a.")
+        card["rate"].configure(text=f"Return Rate: {data['annual_rate']:.2f}% p.a.")
         card["value"].configure(text=format_inr(data["future_value"]))
 
         pnl = data["profit_or_loss"]
@@ -1539,15 +1514,15 @@ class RiskSimulatorView(BaseCalculatorView):
         card["pnl"].configure(text=pnl_text, fg=pnl_color)
 
     def _draw_comparison_bars(self, scenarios):
-        """Draw horizontal bars comparing Low, Moderate, and High hypothetical values."""
+        """Draw horizontal bars comparing Low, Moderate, and High scenario values."""
         self._last_scenarios = scenarios
         canvas = self.compare_canvas
         canvas.delete("all")
         width = max(canvas.winfo_width(), 440)
         items = [
-            ("Low (Hypothetical)", scenarios["low"]["future_value"], Theme.DANGER),
-            ("Moderate (Hypothetical)", scenarios["moderate"]["future_value"], Theme.WARNING),
-            ("High (Hypothetical)", scenarios["high"]["future_value"], Theme.SUCCESS),
+            ("Low Return", scenarios["low"]["future_value"], Theme.DANGER),
+            ("Moderate Return", scenarios["moderate"]["future_value"], Theme.WARNING),
+            ("High Return", scenarios["high"]["future_value"], Theme.SUCCESS),
         ]
         max_val = max((max(val, 0.0) for _lbl, val, _col in items), default=1.0)
         if max_val <= 0:
@@ -1594,7 +1569,7 @@ class RiskSimulatorView(BaseCalculatorView):
             )
 
     def calculate(self):
-        """Validate assumptions, simulate 3 hypothetical scenarios, update UI & save."""
+        """Validate assumptions, simulate 3 return scenarios, update UI & save."""
         self.clear_status(self.status_label)
         try:
             res = self.calculator.simulate_financial_risk(
@@ -1632,8 +1607,7 @@ class RiskSimulatorView(BaseCalculatorView):
         self.invested_ref_label.configure(
             text=(
                 f"Total Capital Invested: {format_inr(res['total_investment'])}  •  "
-                f"Horizon: {res['years']:g} years ({res['total_months']} months)  •  "
-                "All values are HYPOTHETICAL"
+                f"Horizon: {res['years']:g} years ({res['total_months']} months)"
             )
         )
         self._draw_comparison_bars(sc)
@@ -1642,11 +1616,11 @@ class RiskSimulatorView(BaseCalculatorView):
             f"Initial: {format_inr(res['initial_investment'])}, "
             f"Monthly: {format_inr(res['monthly_investment'])}, "
             f"Years: {res['years']:g}, "
-            f"Hypothetical Rates (L/M/H): {sc['low']['annual_rate']:.2f}% / "
+            f"Return Rates (L/M/H): {sc['low']['annual_rate']:.2f}% / "
             f"{sc['moderate']['annual_rate']:.2f}% / {sc['high']['annual_rate']:.2f}%"
         )
         result_summary = (
-            f"[Hypothetical] Low: {format_inr(sc['low']['future_value'])} "
+            f"Low: {format_inr(sc['low']['future_value'])} "
             f"(P/L {format_inr(sc['low']['profit_or_loss'])}) | "
             f"Mod: {format_inr(sc['moderate']['future_value'])} "
             f"(P/L {format_inr(sc['moderate']['profit_or_loss'])}) | "
@@ -1657,13 +1631,13 @@ class RiskSimulatorView(BaseCalculatorView):
         try:
             rec_id = self.save_to_history("Risk Simulator", input_summary, result_summary)
             self.show_success_status(
-                self.status_label, f"Hypothetical simulation saved to History (ID #{rec_id})."
+                self.status_label, f"Simulation saved to History (ID #{rec_id})."
             )
         except DatabaseError as exc:
             self.show_error_status(self.status_label, str(exc))
 
     def reset_defaults(self):
-        """Restore default hypothetical assumptions and clear results."""
+        """Restore default assumptions and clear results."""
         self.initial_var.set("100000")
         self.monthly_var.set("5000")
         self.years_var.set("10")
