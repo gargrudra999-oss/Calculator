@@ -182,6 +182,7 @@ class ScrollableFrame(tk.Frame):
         self.canvas.bind("<Configure>", self._on_canvas_configure)
         self.canvas.bind("<Enter>", self._bind_mousewheel)
         self.canvas.bind("<Leave>", self._unbind_mousewheel)
+        self.bind("<Destroy>", self._unbind_mousewheel)
 
     def _on_inner_configure(self, _event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -190,14 +191,20 @@ class ScrollableFrame(tk.Frame):
         self.canvas.itemconfigure(self.inner_id, width=event.width)
 
     def _on_mousewheel(self, event):
-        if self.inner.winfo_height() > self.canvas.winfo_height():
+        if (
+            self.winfo_ismapped()
+            and self.inner.winfo_height() > self.canvas.winfo_height()
+        ):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _bind_mousewheel(self, _event):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
     def _unbind_mousewheel(self, _event):
-        self.canvas.unbind_all("<MouseWheel>")
+        try:
+            self.canvas.unbind_all("<MouseWheel>")
+        except tk.TclError:
+            pass
 
 
 class ResultCard(tk.Frame):
@@ -409,6 +416,7 @@ class BaseCalculatorView(tk.Frame):
 
     def draw_ratio_bar(self, canvas, primary_val, secondary_val, primary_color, secondary_color):
         """Draw a horizontal two-segment ratio bar on a Tkinter Canvas."""
+        canvas._ratio_args = (primary_val, secondary_val, primary_color, secondary_color)
         canvas.delete("all")
         width = max(canvas.winfo_width(), 320)
         height = 16
@@ -425,6 +433,17 @@ class BaseCalculatorView(tk.Frame):
             canvas.create_rectangle(0, 0, split_x, height, fill=primary_color, outline="")
         if split_x < width:
             canvas.create_rectangle(split_x, 0, width, height, fill=secondary_color, outline="")
+
+    def bind_ratio_bar_resize(self, canvas):
+        """Redraw a ratio bar automatically when the canvas width changes."""
+        canvas._ratio_args = None
+
+        def _on_resize(_event):
+            args = getattr(canvas, "_ratio_args", None)
+            if args is not None:
+                self.draw_ratio_bar(canvas, *args)
+
+        canvas.bind("<Configure>", _on_resize)
 
 
 class DashboardHomeView(BaseCalculatorView):
@@ -641,9 +660,13 @@ class DashboardHomeView(BaseCalculatorView):
                 anchor="w",
             ).pack(side="left")
 
+            preview_text = rec["results"]
+            if len(preview_text) > 92:
+                preview_text = preview_text[:89] + "..."
+
             tk.Label(
                 row,
-                text=rec["results"],
+                text=preview_text,
                 bg=row_bg,
                 fg=Theme.TEXT_PRIMARY,
                 font=Theme.FONT_SMALL,
@@ -787,6 +810,7 @@ class LoanEMIView(BaseCalculatorView):
             breakdown_card, height=16, bg=Theme.INPUT_BG, highlightthickness=0
         )
         self.bar_canvas.pack(fill="x", pady=(0, 8))
+        self.bind_ratio_bar_resize(self.bar_canvas)
 
         legend = tk.Frame(breakdown_card, bg=Theme.CARD_BG)
         legend.pack(fill="x")
@@ -817,16 +841,21 @@ class LoanEMIView(BaseCalculatorView):
 
         months = res["total_months"]
         months_disp = f"{int(months)}" if abs(months - round(months)) < 1e-6 else f"{months:.2f}"
+        inst_word = "installment" if months_disp == "1" else "installments"
 
-        self.card_emi.update_card(emi_str, f"For {months_disp} monthly installments")
+        self.card_emi.update_card(emi_str, f"For {months_disp} monthly {inst_word}")
         self.card_interest.update_card(
             int_str,
             "Zero-interest loan" if res["annual_rate"] == 0 else f"At {res['annual_rate']:.2f}% p.a.",
         )
         self.card_total.update_card(tot_str, f"Principal: {format_inr(res['loan_amount'])}")
 
-        principal_pct = (res["loan_amount"] / res["total_repayment"]) * 100.0
-        interest_pct = (res["total_interest"] / res["total_repayment"]) * 100.0
+        if res["total_repayment"] > 0:
+            principal_pct = (res["loan_amount"] / res["total_repayment"]) * 100.0
+            interest_pct = (res["total_interest"] / res["total_repayment"]) * 100.0
+        else:
+            principal_pct = 0.0
+            interest_pct = 0.0
         self.breakdown_label.configure(
             text=(
                 f"Principal Share: {principal_pct:.1f}% ({format_inr(res['loan_amount'])})   •   "
@@ -869,6 +898,7 @@ class LoanEMIView(BaseCalculatorView):
         self.breakdown_label.configure(
             text="Enter loan parameters and click 'Calculate EMI' to inspect principal vs. interest split."
         )
+        self.bar_canvas._ratio_args = None
         self.bar_canvas.delete("all")
         self.clear_status(self.status_label)
 
@@ -981,6 +1011,7 @@ class CompoundInterestView(BaseCalculatorView):
             breakdown_card, height=16, bg=Theme.INPUT_BG, highlightthickness=0
         )
         self.bar_canvas.pack(fill="x", pady=(0, 8))
+        self.bind_ratio_bar_resize(self.bar_canvas)
 
         legend = tk.Frame(breakdown_card, bg=Theme.CARD_BG)
         legend.pack(fill="x")
@@ -1020,8 +1051,12 @@ class CompoundInterestView(BaseCalculatorView):
             f"Return multiple: {(res['final_amount'] / res['principal']):.2f}x",
         )
 
-        p_pct = (res["principal"] / res["final_amount"]) * 100.0
-        i_pct = (res["compound_interest"] / res["final_amount"]) * 100.0
+        if res["final_amount"] > 0:
+            p_pct = (res["principal"] / res["final_amount"]) * 100.0
+            i_pct = (res["compound_interest"] / res["final_amount"]) * 100.0
+        else:
+            p_pct = 0.0
+            i_pct = 0.0
         self.breakdown_label.configure(
             text=(
                 f"Principal: {p_pct:.1f}% ({format_inr(res['principal'])})   •   "
@@ -1066,6 +1101,7 @@ class CompoundInterestView(BaseCalculatorView):
         self.breakdown_label.configure(
             text="Enter principal, rate, duration, and frequency to calculate compound growth."
         )
+        self.bar_canvas._ratio_args = None
         self.bar_canvas.delete("all")
         self.clear_status(self.status_label)
 
@@ -1159,6 +1195,7 @@ class InvestmentGrowthView(BaseCalculatorView):
             breakdown_card, height=16, bg=Theme.INPUT_BG, highlightthickness=0
         )
         self.bar_canvas.pack(fill="x", pady=(0, 8))
+        self.bind_ratio_bar_resize(self.bar_canvas)
 
         legend = tk.Frame(breakdown_card, bg=Theme.CARD_BG)
         legend.pack(fill="x")
@@ -1192,9 +1229,10 @@ class InvestmentGrowthView(BaseCalculatorView):
             if res["total_investment"] > 0
             else 0.0
         )
+        month_word = "month" if res["total_months"] == 1 else "months"
 
         self.card_fv.update_card(
-            fv_str, f"After {res['total_months']} months at {res['annual_return']:.2f}% p.a."
+            fv_str, f"After {res['total_months']} {month_word} at {res['annual_return']:.2f}% p.a."
         )
         self.card_invested.update_card(
             inv_str,
@@ -1202,8 +1240,12 @@ class InvestmentGrowthView(BaseCalculatorView):
         )
         self.card_profit.update_card(prof_str, f"Total return: +{gain_pct:.1f}%")
 
-        inv_share = (res["total_investment"] / res["future_value"]) * 100.0
-        prof_share = (res["estimated_profit"] / res["future_value"]) * 100.0
+        if res["future_value"] > 0:
+            inv_share = (res["total_investment"] / res["future_value"]) * 100.0
+            prof_share = (res["estimated_profit"] / res["future_value"]) * 100.0
+        else:
+            inv_share = 0.0
+            prof_share = 0.0
         self.breakdown_label.configure(
             text=(
                 f"Invested Share: {inv_share:.1f}% ({inv_str})   •   "
@@ -1247,6 +1289,7 @@ class InvestmentGrowthView(BaseCalculatorView):
         self.breakdown_label.configure(
             text="Enter your initial lump sum, monthly contribution, expected return, and duration."
         )
+        self.bar_canvas._ratio_args = None
         self.bar_canvas.delete("all")
         self.clear_status(self.status_label)
 
@@ -1408,10 +1451,17 @@ class RiskSimulatorView(BaseCalculatorView):
         )
         self.invested_ref_label.pack(fill="x", pady=(0, 10))
 
+        self._last_scenarios = None
         self.compare_canvas = tk.Canvas(
             chart_card, height=118, bg=Theme.CARD_BG, highlightthickness=0
         )
         self.compare_canvas.pack(fill="x")
+        self.compare_canvas.bind(
+            "<Configure>",
+            lambda _e: self._draw_comparison_bars(self._last_scenarios)
+            if self._last_scenarios is not None
+            else None,
+        )
 
     def _create_scenario_card(self, parent, header_text, accent):
         frame = tk.Frame(
@@ -1490,6 +1540,7 @@ class RiskSimulatorView(BaseCalculatorView):
 
     def _draw_comparison_bars(self, scenarios):
         """Draw horizontal bars comparing Low, Moderate, and High hypothetical values."""
+        self._last_scenarios = scenarios
         canvas = self.compare_canvas
         canvas.delete("all")
         width = max(canvas.winfo_width(), 440)
@@ -1631,6 +1682,7 @@ class RiskSimulatorView(BaseCalculatorView):
         self.invested_ref_label.configure(
             text="Total Capital Invested: ₹0.00  |  Run simulation to compare scenarios."
         )
+        self._last_scenarios = None
         self.compare_canvas.delete("all")
         self.clear_status(self.status_label)
 
@@ -1824,10 +1876,14 @@ class HistoryView(tk.Frame):
             font=Theme.FONT_SMALL,
             anchor="w",
             justify="left",
-            wraplength=920,
+            wraplength=680,
             pady=4,
         )
         self.detail_label.pack(fill="x")
+        inspector.bind(
+            "<Configure>",
+            lambda e: self.detail_label.configure(wraplength=max(e.width - 36, 300)),
+        )
 
         self.refresh_records()
 
