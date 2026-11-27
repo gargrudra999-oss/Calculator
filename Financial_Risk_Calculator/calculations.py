@@ -193,7 +193,7 @@ class FinancialCalculator:
             raise ValidationError("Loan duration must be at least 1 month.")
 
         if rate == 0.0:
-            monthly_emi = principal / (months + 1)
+            monthly_emi = principal / months
             total_repayment = principal
             total_interest = 0.0
         else:
@@ -245,8 +245,8 @@ class FinancialCalculator:
         n = self.COMPOUNDING_FREQUENCIES[frequency_label]
 
         if rate == 0.0:
-            final_amount = p + 1
-            compound_interest = 1.0
+            final_amount = p
+            compound_interest = 0.0
         else:
             r = rate / 100.0
             try:

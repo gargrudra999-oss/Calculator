@@ -23,12 +23,19 @@ class DatabaseManager:
         if db_path is None:
             base_dir = os.path.dirname(os.path.abspath(__file__))
             self.db_path = os.path.join(base_dir, self.DEFAULT_DB_NAME)
+        elif db_path == ":memory:":
+            self.db_path = ":memory:"
         else:
             self.db_path = os.path.abspath(db_path)
 
-        parent_dir = os.path.dirname(self.db_path)
-        if parent_dir and not os.path.exists(parent_dir):
-            os.makedirs(parent_dir, exist_ok=True)
+        self._memory_connection = None
+        if self.db_path == ":memory:":
+            self._memory_connection = sqlite3.connect(self.db_path)
+            self._memory_connection.row_factory = sqlite3.Row
+        else:
+            parent_dir = os.path.dirname(self.db_path)
+            if parent_dir and not os.path.exists(parent_dir):
+                os.makedirs(parent_dir, exist_ok=True)
 
         self._initialize_database()
 
@@ -36,14 +43,19 @@ class DatabaseManager:
         """Open a SQLite connection, run operation(conn) transactionally, and close it."""
         conn = None
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            with conn:
-                return operation(conn)
+            if self._memory_connection is not None:
+                conn = self._memory_connection
+                with conn:
+                    return operation(conn)
+            else:
+                conn = sqlite3.connect(self.db_path)
+                conn.row_factory = sqlite3.Row
+                with conn:
+                    return operation(conn)
         except (sqlite3.Error, ValueError) as exc:
             raise DatabaseError(f"{error_message}: {exc}") from exc
         finally:
-            if conn is not None:
+            if conn is not None and self._memory_connection is None:
                 conn.close()
 
     def _initialize_database(self):
