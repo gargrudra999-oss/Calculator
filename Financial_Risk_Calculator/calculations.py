@@ -136,9 +136,14 @@ class FinancialCalculator:
                     "Monthly return rate cannot be -100% or lower."
                 )
             try:
-                growth_factor = math.pow(1.0 + monthly_rate, months)
+                log_growth = months * math.log1p(monthly_rate)
+                growth_delta = math.expm1(log_growth)
+                growth_factor = 1.0 + growth_delta
                 fv_initial = initial * growth_factor
-                fv_monthly = monthly * ((growth_factor - 1.0) / monthly_rate)
+                if growth_delta == 0.0:
+                    fv_monthly = monthly * months
+                else:
+                    fv_monthly = monthly * (growth_delta / monthly_rate)
                 future_value = fv_initial + fv_monthly
             except OverflowError as exc:
                 raise ValidationError(
@@ -194,12 +199,13 @@ class FinancialCalculator:
         else:
             monthly_rate = rate / (12.0 * 100.0)
             try:
-                factor = math.pow(1.0 + monthly_rate, months)
-                denominator = factor - 1.0
+                log_factor = months * math.log1p(monthly_rate)
+                denominator = math.expm1(log_factor)
                 if denominator == 0.0:
                     raise ValidationError(
                         "Interest rate and duration are too small for precision calculation."
                     )
+                factor = 1.0 + denominator
                 monthly_emi = principal * monthly_rate * factor / denominator
                 total_repayment = monthly_emi * months
                 total_interest = total_repayment - principal
@@ -244,8 +250,8 @@ class FinancialCalculator:
         else:
             r = rate / 100.0
             try:
-                final_amount = p * math.pow(1.0 + (r / n), n * t)
-                compound_interest = final_amount - p
+                compound_interest = p * math.expm1(n * t * math.log1p(r / n))
+                final_amount = p + compound_interest
             except OverflowError as exc:
                 raise ValidationError(
                     "Interest rate or duration is too large for compounding."

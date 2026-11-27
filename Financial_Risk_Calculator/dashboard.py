@@ -6,6 +6,7 @@ tkinter.messagebox modules. Uses Unicode symbols and canvas bars without
 any external images, icons, fonts, or libraries.
 """
 
+import sys
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -161,6 +162,8 @@ def create_action_button(
 class ScrollableFrame(tk.Frame):
     """Scrollable container so content never clips on smaller screens."""
 
+    _instances = set()
+
     def __init__(self, parent, bg=Theme.BG_MAIN):
         super().__init__(parent, bg=bg)
         self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
@@ -180,9 +183,58 @@ class ScrollableFrame(tk.Frame):
 
         self.inner.bind("<Configure>", self._on_inner_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
-        self.canvas.bind("<Enter>", self._bind_mousewheel)
-        self.canvas.bind("<Leave>", self._unbind_mousewheel)
-        self.bind("<Destroy>", self._unbind_mousewheel)
+        self.bind("<Destroy>", self._on_destroy)
+
+        ScrollableFrame._instances.add(self)
+        self._ensure_global_scroll_bindings()
+
+    def _ensure_global_scroll_bindings(self):
+        root = self.winfo_toplevel()
+        if getattr(root, "_scrollable_frame_bound", False):
+            return
+        root._scrollable_frame_bound = True
+        root.bind_all("<MouseWheel>", ScrollableFrame._dispatch_mousewheel)
+        root.bind_all("<Button-4>", ScrollableFrame._dispatch_linux_scroll_up)
+        root.bind_all("<Button-5>", ScrollableFrame._dispatch_linux_scroll_down)
+
+    @classmethod
+    def _find_target_frame(cls, event):
+        widget = None
+        if hasattr(event, "x_root") and hasattr(event, "y_root"):
+            for frame in tuple(cls._instances):
+                if frame.winfo_exists():
+                    try:
+                        widget = frame.winfo_containing(event.x_root, event.y_root)
+                    except tk.TclError:
+                        widget = None
+                    break
+        if widget is None and isinstance(getattr(event, "widget", None), tk.Misc):
+            widget = event.widget
+
+        curr = widget
+        while curr is not None:
+            if curr in cls._instances and curr.winfo_exists() and curr.winfo_ismapped():
+                return curr
+            curr = getattr(curr, "master", None)
+        return None
+
+    @classmethod
+    def _dispatch_mousewheel(cls, event):
+        target = cls._find_target_frame(event)
+        if target is not None:
+            target._on_mousewheel(event)
+
+    @classmethod
+    def _dispatch_linux_scroll_up(cls, event):
+        target = cls._find_target_frame(event)
+        if target is not None:
+            target._scroll_units(-1)
+
+    @classmethod
+    def _dispatch_linux_scroll_down(cls, event):
+        target = cls._find_target_frame(event)
+        if target is not None:
+            target._scroll_units(1)
 
     def _on_inner_configure(self, _event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -190,21 +242,27 @@ class ScrollableFrame(tk.Frame):
     def _on_canvas_configure(self, event):
         self.canvas.itemconfigure(self.inner_id, width=event.width)
 
-    def _on_mousewheel(self, event):
+    def _scroll_units(self, units):
         if (
-            self.winfo_ismapped()
+            units != 0
+            and self.winfo_ismapped()
             and self.inner.winfo_height() > self.canvas.winfo_height()
         ):
-            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            self.canvas.yview_scroll(units, "units")
 
-    def _bind_mousewheel(self, _event):
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+    def _on_mousewheel(self, event):
+        delta = getattr(event, "delta", 0)
+        if delta == 0:
+            return
+        if sys.platform == "darwin" or abs(delta) < 120:
+            units = -1 if delta > 0 else 1
+        else:
+            units = int(-1 * (delta / 120))
+        self._scroll_units(units)
 
-    def _unbind_mousewheel(self, _event):
-        try:
-            self.canvas.unbind_all("<MouseWheel>")
-        except tk.TclError:
-            pass
+    def _on_destroy(self, event):
+        if event.widget is self:
+            ScrollableFrame._instances.discard(self)
 
 
 class ResultCard(tk.Frame):
@@ -840,7 +898,11 @@ class LoanEMIView(BaseCalculatorView):
         tot_str = format_inr(res["total_repayment"])
 
         months = res["total_months"]
-        months_disp = f"{int(months)}" if abs(months - round(months)) < 1e-6 else f"{months:.2f}"
+        months_disp = (
+            f"{int(round(months))}"
+            if abs(months - round(months)) < 1e-6
+            else f"{months:.2f}"
+        )
         inst_word = "installment" if months_disp == "1" else "installments"
 
         self.card_emi.update_card(emi_str, f"For {months_disp} monthly {inst_word}")
