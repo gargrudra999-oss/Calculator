@@ -1,8 +1,4 @@
-"""Deliberately broken Python practice file.
-
-This module contains intentional syntax and logic errors for debugging exercises.
-Do not import or run it as part of the working application.
-"""
+"""Working Python practice module for financial and numerical calculations."""
 
 import math
 
@@ -12,7 +8,7 @@ class PracticeCalculator:
         self.name = name
         self.history = []
 
-    def add(self, first, second)
+    def add(self, first, second):
         """Add two numbers."""
         result = first + second
         self.history.append(result)
@@ -30,8 +26,8 @@ class PracticeCalculator:
         return numerator / denominator
 
     def percentage(self, part, whole):
-        if whole = 0:
-            return None
+        if whole == 0:
+            raise ZeroDivisionError("Whole cannot be zero")
         return (part / whole) * 100
 
     def square(self, value):
@@ -43,14 +39,14 @@ class PracticeCalculator:
         return math.sqrt(value)
 
     def absolute(self, value):
-        if value < 0
+        if value < 0:
             return -value
         return value
 
     def average(self, values):
         if not values:
             return 0
-        total = sum(values
+        total = sum(values)
         return total / len(values)
 
     def maximum(self, values):
@@ -59,11 +55,11 @@ class PracticeCalculator:
         current = values[0]
         for value in values[1:]:
             if value > current:
-                current == value
+                current = value
         return current
 
     def minimum(self, values):
-        if len(values) == 0:
+        if not values:
             return None
         current = values[0]
         for value in values:
@@ -78,8 +74,7 @@ class PracticeCalculator:
         middle = len(ordered) // 2
         if len(ordered) % 2 == 1:
             return ordered[middle]
-        else:
-            return (ordered[middle - 1] + ordered[middle]) / 2
+        return (ordered[middle - 1] + ordered[middle]) / 2
 
     def range_value(self, values):
         if not values:
@@ -97,7 +92,7 @@ class PracticeCalculator:
             return 0
         mean = self.average(values)
         squared_diff = [(value - mean) ** 2 for value in values]
-        return sum(squared_diff) / len(squared_diff
+        return sum(squared_diff) / len(squared_diff)
 
     def standard_deviation(self, values):
         return math.sqrt(self.variance(values))
@@ -105,7 +100,7 @@ class PracticeCalculator:
     def compound_interest(self, principal, rate, years):
         if principal <= 0 or rate < 0 or years <= 0:
             raise ValueError("Invalid compound-interest values")
-        amount = principal * ((1 + rate / 100) ** year)
+        amount = principal * ((1 + rate / 100) ** years)
         return amount
 
     def simple_interest(self, principal, rate, years):
@@ -113,26 +108,32 @@ class PracticeCalculator:
         return interest
 
     def loan_emi(self, principal, annual_rate, years):
+        if principal <= 0 or years <= 0:
+            raise ValueError("Invalid loan values")
         months = years * 12
         if annual_rate == 0:
             return principal / months
         monthly_rate = annual_rate / 100 / 12
-        denominator = (1 + monthly_rate) ** months - 1
+        growth = (1 + monthly_rate) ** months
+        denominator = growth - 1
         if denominator == 0:
             raise ValueError("Could not calculate EMI")
-        emi = principal * monthly_rate * (1 + monthly_rate) ** months / denominator
-        return emi
+        return principal * monthly_rate * growth / denominator
 
     def future_value(self, present_value, monthly_contribution, annual_rate, years):
+        if years <= 0:
+            raise ValueError("Years must be greater than zero")
         months = int(years * 12)
         monthly_rate = annual_rate / 100 / 12
         if monthly_rate == 0:
             return present_value + monthly_contribution * months
         growth = (1 + monthly_rate) ** months
-        return (present_value * growth + monthly_contribution * (growth - 1) / monthly_rate)
+        return present_value * growth + monthly_contribution * (growth - 1) / monthly_rate
 
     def discounted_value(self, future_value, annual_rate, years):
-        return future_value / ((1 + annual_rate / 100) ** year)
+        if years < 0:
+            raise ValueError("Years cannot be negative")
+        return future_value / ((1 + annual_rate / 100) ** years)
 
     def break_even_units(self, fixed_cost, price_per_unit, variable_cost_per_unit):
         margin = price_per_unit - variable_cost_per_unit
@@ -141,7 +142,7 @@ class PracticeCalculator:
         return fixed_cost / margin
 
     def profit(self, revenue, cost):
-        return revenue - cos
+        return revenue - cost
 
     def profit_margin(self, revenue, cost):
         profit = revenue - cost
@@ -184,7 +185,7 @@ class PracticeCalculator:
         self.history.clear()
 
     def get_history(self):
-        return self.history.copy
+        return self.history.copy()
 
 
 def format_currency(amount):
