@@ -1,5 +1,5 @@
 """
-Modern Ember-Dark (Orange-Red) Tkinter Dashboard GUI for the Financial Risk Calculator.
+Modern Dark-Navy Tkinter Dashboard GUI for the Financial Risk Calculator.
 
 Built exclusively with Python's built-in tkinter, tkinter.ttk, and
 tkinter.messagebox modules. Uses Unicode symbols and canvas bars without
@@ -17,25 +17,25 @@ from database import DatabaseError
 class Theme:
     """Centralized color palette and typography tokens."""
 
-    BG_MAIN = "#131114"
-    SIDEBAR_BG = "#1A161C"
-    CARD_BG = "#211C24"
-    CARD_ALT = "#2B2430"
-    INPUT_BG = "#171419"
-    BORDER = "#3E3342"
+    BG_MAIN = "#0B132B"
+    SIDEBAR_BG = "#111B36"
+    CARD_BG = "#1C2541"
+    CARD_ALT = "#233054"
+    INPUT_BG = "#131C35"
+    BORDER = "#2F4172"
 
-    ACCENT = "#FF5A36"
-    ACCENT_HOVER = "#FF7A59"
-    ACCENT_DARK = "#D93E1C"
+    ACCENT = "#3A86FF"
+    ACCENT_HOVER = "#5C9CFF"
+    ACCENT_DARK = "#2563EB"
 
     SUCCESS = "#2EC4B6"
-    WARNING = "#FBBF24"
-    DANGER = "#F43F5E"
-    DANGER_DARK = "#BE123C"
+    WARNING = "#F59E0B"
+    DANGER = "#EF4444"
+    DANGER_DARK = "#DC2626"
 
-    TEXT_PRIMARY = "#FAF7F5"
-    TEXT_SECONDARY = "#D6CEC8"
-    TEXT_MUTED = "#9E928C"
+    TEXT_PRIMARY = "#F8FAFC"
+    TEXT_SECONDARY = "#CBD5E1"
+    TEXT_MUTED = "#8EA0C2"
 
     FONT_FAMILY = "Segoe UI"
     FONT_TITLE = (FONT_FAMILY, 20, "bold")
@@ -50,7 +50,7 @@ class Theme:
 
 
 def configure_ttk_styles(root):
-    """Configure ttk styles on top of the 'clam' theme for dark ember widgets."""
+    """Configure ttk styles on top of the 'clam' theme for dark-navy widgets."""
     style = ttk.Style(root)
     style.theme_use("clam")
 
@@ -456,7 +456,7 @@ class BaseCalculatorView(tk.Frame):
         """Display an inline success/saved confirmation message."""
         status_label.configure(
             text=f"✓ {message}",
-            bg="#143331",
+            bg="#123539",
             fg=Theme.SUCCESS,
             padx=10,
             pady=8,
